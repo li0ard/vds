@@ -1,0 +1,38 @@
+{
+  "name": "@li0ard/vds",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "version": "0.1.0",
+  "type": "module",
+  "author": "li0ard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/li0ard/vds.git"
+  },
+  "bugs": {
+    "url": "https://github.com/li0ard/vds/issues"
+  },
+  "homepage": "https://github.com/li0ard/vds#readme",
+  "description": "simple library for ICAO Visible Digital Seals (VDS). supports browsers, node, bun and more!",
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc --project tsconfig.build.json",
+    "docs": "typedoc --options .config/typedoc/config.cjs"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typedoc": "^0.28.15"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1"
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["emrtd", "mrtd", "icao", "vds", "tsemrtd", "9303", "passport"]
+}
