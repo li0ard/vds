@@ -21,6 +21,32 @@ export class DateEncoder {
 
         return new Date(year, month - 1, day);
     }
+
+    static encodeDateTime(date: Date): Uint8Array {
+        const formattedDateTime = 
+            (date.getMonth() + 1).toString().padStart(2, '0') +
+            date.getDate().toString().padStart(2, '0') +
+            date.getFullYear().toString().padStart(4, '0') +
+            date.getHours().toString().padStart(2, '0') +
+            date.getMinutes().toString().padStart(2, '0') +
+            date.getSeconds().toString().padStart(2, '0');
+        
+        return numberToBytesBE(BigInt(formattedDateTime), 6);
+    }
+
+    static decodeDateTime(date: Uint8Array): Date {
+        if (date.length !== 6) throw new Error("Expected six bytes for date decoding");
+
+        const paddedDateString = bytesToNumberBE(date).toString().padStart(14, '0');
+        const month = parseInt(paddedDateString.substring(0, 2));
+        const day = parseInt(paddedDateString.substring(2, 4));
+        const year = parseInt(paddedDateString.substring(4, 8));
+        const hour = parseInt(paddedDateString.substring(8, 10));
+        const minute = parseInt(paddedDateString.substring(10, 12));
+        const second = parseInt(paddedDateString.substring(12, 14));
+    
+        return new Date(year, month - 1, day, hour, minute, second);
+    }
 }
 
 /**

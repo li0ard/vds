@@ -45,7 +45,11 @@ export class VDSHeader {
 
     /** Identifier of document */
     get documentRef(): number {
-        return ((this.docFeatureRef & 0xFF) << 8) + (this.docTypeCat & 0xFF)
+        return ((this.docFeatureRef & 0xFF) << 8) + (this.docTypeCat & 0xFF);
+    }
+    set documentRef(documentRef: number) {
+        this.docFeatureRef = (documentRef >> 8) & 0xFF;
+        this.docTypeCat = documentRef & 0xFF;
     }
 
     private get encodedSignerIdentifierAndCertificateReference(): string {
@@ -54,8 +58,7 @@ export class VDSHeader {
         }
         else if(this.rawVersion == 3) {
             const certRef = this.certificateReference || '';
-            const certRefLengthHex = certRef.length.toString(16).padStart(2, '0');
-            return `${this.signerIdentifier || ''}${certRefLengthHex}${certRef}`.toUpperCase();
+            return `${this.signerIdentifier || ''}${certRef.length.toString(16).padStart(2, '0')}${certRef}`.toUpperCase();
         }
         else return "";
     }
@@ -80,38 +83,35 @@ export class VDSHeader {
 
         const magicByte = data[offset];
         offset += 1;
-
         if(magicByte != 0xDC) throw new Error("Magic Constant mismatch");
 
         const rawVersion = data[offset];
         offset += 1;
-
         if(!(rawVersion == 2 || rawVersion == 3)) throw new Error("Unsupported raw version");
 
-        const issuingCountry = C40Encoder.decode(data.slice(offset, offset + 2))
+        const issuingCountry = C40Encoder.decode(data.slice(offset, offset + 2));
         offset += 2;
 
         let signerIdentifier: string, certificateReference: string;
         if(rawVersion == 3) { // ICAO version 4
-            let signerIdentifierAndCertRefLength = C40Encoder.decode(data.slice(offset, offset + 4));
+            const signerIdentifierAndCertRefLength = C40Encoder.decode(data.slice(offset, offset + 4));
             offset += 4;
             signerIdentifier = signerIdentifierAndCertRefLength.substring(0, 4);
             
-            let certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
-            let bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
+            const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
+            const bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
             
             certificateReference = C40Encoder.decode(data.slice(offset, offset + bytesToDecode));
             offset += bytesToDecode;
         } else { // ICAO version 3
-            let signerCertRef = C40Encoder.decode(data.slice(offset, offset + 6));
+            const signerCertRef = C40Encoder.decode(data.slice(offset, offset + 6));
             offset += 6;
             signerIdentifier = signerCertRef.substring(0, 4);
-            certificateReference = signerCertRef.substring(4)
+            certificateReference = signerCertRef.substring(4);
         }
         
         const issuingDate = DateEncoder.decode(data.slice(offset, offset + 3));
         offset += 3;
-        
         const sigDate = DateEncoder.decode(data.slice(offset, offset + 3));
         offset += 3;
 
@@ -122,7 +122,7 @@ export class VDSHeader {
         
         const decoded = new VDSHeader(issuingCountry, signerIdentifier, certificateReference, issuingDate, sigDate, docFeatureRef, docTypeCat, rawVersion);
         decoded._offset = offset;
-        return decoded
+        return decoded;
     }
 }
 
@@ -138,8 +138,8 @@ export class VDSSignature {
 
     /**
      * Seal signature (ECDSA)
-     * @param r ECDSA `r` value
-     * @param s ECDSA `s` value
+     * @param r `r` value
+     * @param s `s` value
      */
     constructor(r: Uint8Array, s: Uint8Array) {
         this._r = r;
@@ -199,14 +199,6 @@ export class Seal {
         public signature: VDSSignature | null = null
     ) {}
 
-    /** Encoded visible digital seal */
-    get encoded(): Uint8Array {
-        let encoded = this.signedBytes;
-        if(this.signature) encoded = concatBytes(encoded, this.signature.encoded);
-        
-        return encoded;
-    }
-
     /** Signed bytes */
     get signedBytes(): Uint8Array {
         return concatBytes(this.header.encoded, ...this.messageList.map(i => i.encoded));
@@ -214,6 +206,14 @@ export class Seal {
     /** Signature bytes */
     get signatureBytes(): Uint8Array | null {
         return this.signature ? this.signature.toDER() : null;
+    }
+
+    /** Encoded visible digital seal */
+    get encoded(): Uint8Array {
+        let encoded = this.signedBytes;
+        if(this.signature) encoded = concatBytes(encoded, this.signature.encoded);
+        
+        return encoded;
     }
 
     /** Decode visible digital seal from bytes */
