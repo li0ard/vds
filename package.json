@@ -2,7 +2,7 @@
   "name": "@li0ard/vds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "author": "li0ard",
   "repository": {
@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/pako": "^2.0.4",
     "typedoc": "^0.28.15"
   },
   "peerDependencies": {
@@ -28,7 +29,9 @@
   },
   "dependencies": {
     "@noble/curves": "^2.0.1",
-    "@noble/hashes": "^2.0.1"
+    "@noble/hashes": "^2.0.1",
+    "@scure/base": "^2.0.0",
+    "pako": "^2.1.0"
   },
   "files": ["dist"],
   "publishConfig": {

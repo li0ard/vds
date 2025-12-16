@@ -6,6 +6,8 @@ import { bytesToNumberBE, concatBytes, numberToBytesBE } from "@noble/curves/uti
  * Described by ICAO 9303 p.13 section 2.3.1
  */
 export class DateEncoder {
+    static MASKED_DATE_REGEX = /(.{4})-(.{2})-(.{2})/;
+
     /** Encode date */
     static encode(date: Date): Uint8Array {
         return numberToBytesBE(parseInt(`${(date.getMonth() + 1).toString().padStart(2, "0")}${(date.getDate()).toString().padStart(2, "0")}${(date.getFullYear()).toString().padStart(4, "0")}`), 3)
@@ -13,6 +15,7 @@ export class DateEncoder {
 
     /** Decode date */
     static decode(date: Uint8Array): Date {
+        if (date.length !== 3) throw new Error("Expected 3 bytes for date decoding");
         const intValue = bytesToNumberBE(date);
 
         const day = Number((intValue % 1000000n) / 10000n);
@@ -22,6 +25,7 @@ export class DateEncoder {
         return new Date(year, month - 1, day);
     }
 
+    /** Encode DateTime*/
     static encodeDateTime(date: Date): Uint8Array {
         const formattedDateTime = 
             (date.getMonth() + 1).toString().padStart(2, '0') +
@@ -34,8 +38,9 @@ export class DateEncoder {
         return numberToBytesBE(BigInt(formattedDateTime), 6);
     }
 
+    /** Decode DateTime */
     static decodeDateTime(date: Uint8Array): Date {
-        if (date.length !== 6) throw new Error("Expected six bytes for date decoding");
+        if (date.length !== 6) throw new Error("Expected 6 bytes for datetime decoding");
 
         const paddedDateString = bytesToNumberBE(date).toString().padStart(14, '0');
         const month = parseInt(paddedDateString.substring(0, 2));
@@ -46,6 +51,39 @@ export class DateEncoder {
         const second = parseInt(paddedDateString.substring(12, 14));
     
         return new Date(year, month - 1, day, hour, minute, second);
+    }
+
+    /** Encode masked date */
+    static encodeMaskedDate(date: string): Uint8Array {
+        if(!date.match(DateEncoder.MASKED_DATE_REGEX)) throw new Error("Date string must be formated as yyyy-MM-dd");
+
+        const formattedDate = date.replace(DateEncoder.MASKED_DATE_REGEX, "$2$3$1").toLowerCase();
+        const dateInt = parseInt(formattedDate.replaceAll("x", "0"));
+        const dateCharArray = formattedDate.split("");
+        let mask = 0;
+
+        for(let i = 0; i < 8; i++)
+            if (dateCharArray[i] == 'x') mask |= (0x80 >> i) & 0xFF;
+
+        return new Uint8Array([mask & 0xFF, (dateInt >>> 16) & 0xFF, (dateInt >>> 8) & 0xFF, dateInt & 0xFF]);
+    }
+
+    /** Decode masked date */
+    static decodeMaskedDate(date: Uint8Array): string {
+        if(date.length != 4) throw new Error("Expected 4 bytes for masked date decoding");
+
+        const mask = date[0];
+        const intval = bytesToNumberBE(date.subarray(1));
+        
+        const day = Number((intval % 1000000n) / 10000n);
+        const month = Number(intval / 1000000n);
+        const year = Number(intval % 10000n);
+        const dateCharArray = `${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}${year.toString().padStart(4, '0')}`.split("");
+
+        for(let i = 0; i < 8; i++)
+            if (((mask >> (7 - i)) & 1) === 1) dateCharArray[i] = 'x';
+
+        return dateCharArray.join("").replace(/(.{2})(.{2})(.{4})/, "$3-$1-$2").toLowerCase();
     }
 }
 

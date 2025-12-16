@@ -1,5 +1,5 @@
 import { bytesToNumberBE, concatBytes } from "@noble/curves/utils.js";
-import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "./utils.js";
+import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
 
 /**
  * Seal header
@@ -7,6 +7,8 @@ import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "./utils.js";
  * Described by ICAO 9303 p.13 section 2.2
  */
 export class VDSHeader {
+    static readonly TAG = 0xDC;
+
     /** Offset for decoding */
     public _offset = 0;
 
@@ -30,7 +32,12 @@ export class VDSHeader {
         public docFeatureRef: number = 0,
         public docTypeCat: number = 0,
         public rawVersion: number = 3
-    ) {}
+    ) {
+        if(!(docFeatureRef >= 1 && docFeatureRef <= 254)) throw new Error("docFeatureRef MUST be in range between 1 and 254");
+        // Standard says: "Odd numbers in the range between 01dec and 253dec SHALL be used for ICAO-specified Document Type Categories"
+        // but all samples using even number, so we check only range
+        if(!(docTypeCat >= 1 && docTypeCat <= 253)) throw new Error("docTypeCat MUST be in range between 1 and 253");
+    }
 
     /** Identifier of signer certificate */
     get signerCertRef(): string {
@@ -52,8 +59,12 @@ export class VDSHeader {
         this.docTypeCat = documentRef & 0xFF;
     }
 
+    /** Version of VDS (`rawVersion` + 1) */
+    get version(): number { return this.rawVersion + 1; }
+
     private get encodedSignerIdentifierAndCertificateReference(): string {
         if(this.rawVersion == 2) {
+            if(this.certificateReference.length > 5) throw new Error("For version 3 certificateReference MUST be exactly five characters");
             return `${this.signerIdentifier || ''}${(this.certificateReference || '').padStart(5, ' ')}`.toUpperCase().replace(/ /g, '0');
         }
         else if(this.rawVersion == 3) {
@@ -65,7 +76,7 @@ export class VDSHeader {
     
     /** Encoded VDS header */
     get encoded(): Uint8Array {
-        const buffer: number[] = [0xDC];
+        const buffer: number[] = [VDSHeader.TAG];
         buffer.push(this.rawVersion);
         buffer.push(...C40Encoder.encode(this.issuingCountry));
         buffer.push(...C40Encoder.encode(this.encodedSignerIdentifierAndCertificateReference));
@@ -83,7 +94,7 @@ export class VDSHeader {
 
         const magicByte = data[offset];
         offset += 1;
-        if(magicByte != 0xDC) throw new Error("Magic Constant mismatch");
+        if(magicByte != VDSHeader.TAG) throw new Error("Magic Constant mismatch");
 
         const rawVersion = data[offset];
         offset += 1;
