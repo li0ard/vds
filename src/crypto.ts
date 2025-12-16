@@ -64,7 +64,7 @@ export class Verifier {
                 digest = sha512;
                 break;
             default:
-                throw("Invalid signature algorithm");
+                throw new Error("Invalid signature algorithm");
         }
 
         return this.curve.verify(barcode.signatureBytes, digest(barcode.signedBytes), this.publicKey, {
@@ -131,7 +131,7 @@ export class Signer {
                 digest = sha512;
                 break;
             default:
-                throw("Invalid signature algorithm");
+                throw new Error("Invalid signature algorithm");
         }
 
         const signature = this.curve.sign(digest(barcode.signedBytes), this.privateKey, { prehash: false });

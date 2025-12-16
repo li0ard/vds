@@ -1,5 +1,5 @@
-import { bytesToNumberBE, concatBytes } from "@noble/curves/utils.js";
-import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
+import { concatBytes } from "@noble/curves/utils.js";
+import { AbstractECDSARawSignature, C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
 
 /**
  * Seal header
@@ -142,54 +142,9 @@ export class VDSHeader {
  * 
  * Described by ICAO 9303 p.13 section 2.4
  */
-export class VDSSignature {
-    static readonly TAG = 0xff;
-    private _r: Uint8Array;
-    private _s: Uint8Array;
-
-    /**
-     * Seal signature (ECDSA)
-     * @param r `r` value
-     * @param s `s` value
-     */
-    constructor(r: Uint8Array, s: Uint8Array) {
-        this._r = r;
-        this._s = s;
-    }
-
-    /** `r` as bigint */
-    get r(): bigint { return bytesToNumberBE(this._r); }
-    /** `r` as bytes */
-    get rBytes(): Uint8Array { return this._r; }
-    /** `s` as bigint */
-    get s(): bigint { return bytesToNumberBE(this._s); }
-    /** `s` as bytes */
-    get sBytes(): Uint8Array { return this._s; }
-
-    /** Encoded VDS signature */
-    get encoded(): Uint8Array {
-        return new DerTLV(VDSSignature.TAG, concatBytes(this.rBytes, this.sBytes)).encoded;
-    }
-
-    /** Encoded VDS signature (as ASN.1) */
-    toDER(): Uint8Array {
-        return new DerTLV(0x30, concatBytes(
-            DerTLV.getDerInteger(this.rBytes),
-            DerTLV.getDerInteger(this.sBytes),
-        )).encoded;
-    }
-
-    /** Decode VDS signature from bytes */
-    static decode(data: Uint8Array): VDSSignature {
-        if(data[0] != VDSSignature.TAG) throw new Error("Signature tag mismatch");
-
-        const parsed = DerTLV.decode(data);
-        if(parsed == null) throw new Error("Invalid signature");
-        return new VDSSignature(
-            parsed.value.slice(0, parsed.value.length / 2),
-            parsed.value.slice(parsed.value.length / 2, parsed.value.length)
-        );
-    }
+export class VDSSignature extends AbstractECDSARawSignature {
+    static readonly TAG = 0xFF;
+    readonly TAG = VDSSignature.TAG;
 }
 
 /**

@@ -1,5 +1,5 @@
-import { bytesToNumberBE, concatBytes } from "@noble/curves/utils.js";
-import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
+import { concatBytes } from "@noble/curves/utils.js";
+import { AbstractECDSARawSignature, C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
 import { deflate, inflate } from "pako";
 import { base32nopad } from "@scure/base";
 
@@ -77,54 +77,9 @@ export class IDBHeader {
  * 
  * Described by ICAO Datastructure for Barcode section 3.5
  */
-export class IDBSignature {
+export class IDBSignature extends AbstractECDSARawSignature {
     static readonly TAG = 0x7F;
-    private _r: Uint8Array;
-    private _s: Uint8Array;
-
-    /**
-     * Barcode signature (ECDSA)
-     * @param r `r` value
-     * @param s `s` value
-     */
-    constructor(r: Uint8Array, s: Uint8Array) {
-        this._r = r;
-        this._s = s;
-    }
-
-    /** `r` as bigint */
-    get r(): bigint { return bytesToNumberBE(this._r); }
-    /** `r` as bytes */
-    get rBytes(): Uint8Array { return this._r; }
-    /** `s` as bigint */
-    get s(): bigint { return bytesToNumberBE(this._s); }
-    /** `s` as bytes */
-    get sBytes(): Uint8Array { return this._s; }
-
-    /** Encoded IDB signature */
-    get encoded(): Uint8Array {
-        return new DerTLV(IDBSignature.TAG, concatBytes(this.rBytes, this.sBytes)).encoded;
-    }
-
-    /** Encoded IDB signature (as ASN.1) */
-    toDER(): Uint8Array {
-        return new DerTLV(0x30, concatBytes(
-            DerTLV.getDerInteger(this.rBytes),
-            DerTLV.getDerInteger(this.sBytes),
-        )).encoded;
-    }
-
-    /** Decode IDB signature from bytes */
-    static decode(data: Uint8Array): IDBSignature {
-        if(data[0] != IDBSignature.TAG) throw new Error("Signature tag mismatch");
-
-        const parsed = DerTLV.decode(data);
-        if(parsed == null) throw new Error("Invalid signature");
-        return new IDBSignature(
-            parsed.value.slice(0, parsed.value.length / 2),
-            parsed.value.slice(parsed.value.length / 2, parsed.value.length)
-        );
-    }
+    readonly TAG = IDBSignature.TAG;
 }
 
 /**
