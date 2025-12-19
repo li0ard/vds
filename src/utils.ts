@@ -213,7 +213,7 @@ export class DerTLV {
         let positiveValue: Uint8Array;
         if (value[0] & 0x80) {
             const temp = new Uint8Array(value.length + 1);
-            temp[0] = 0x00;
+            temp[0] = 0;
             temp.set(value, 1);
             positiveValue = temp;
         } else {
@@ -280,6 +280,22 @@ export const parseTLVs = (rawBytes: Uint8Array): DerTLV[] => {
     }
 
     return derTlvList;
+}
+
+export const intToBytesBE = (value: bigint | number): Uint8Array => {
+    if(typeof value == "number") value = BigInt(value);
+    if(value < 0n) throw new Error("Feature MUST be positive integer");
+    if (value === 0n) return new Uint8Array([0]);
+
+    const bytes: number[] = [];
+    let v = value;
+
+    while (v > 0) {
+        bytes.unshift(Number(v & 0xffn));
+        v >>= 8n;
+    }
+
+    return new Uint8Array(bytes);
 }
 
 /** Abstract ECDSA signature (Raw format) */

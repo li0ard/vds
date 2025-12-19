@@ -50,7 +50,7 @@ export class VDSHeader {
         return (this.signerIdentifier + certRefInteger).toUpperCase();
     }
 
-    /** Identifier of document */
+    /** Identifier of document (`docFeatureRef || docTypeCat`) */
     get documentRef(): number {
         return ((this.docFeatureRef & 0xFF) << 8) + (this.docTypeCat & 0xFF);
     }

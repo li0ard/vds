@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
-import { FeatureCoding, mapSealToFeatures, Seal, type SealSchema } from "../src";
+import { DerTLV, FeatureCoding, mapFeaturesToSeal, mapSealToFeatures, Seal, type SealSchema } from "../src";
+import { equalBytes } from "@noble/curves/utils.js";
 
 // Schemas from https://github.com/tsenger/vdstools/blob/main/src/commonMain/resources/SealCodings.json
 const ARRIVAL_ATTESTATION = {
@@ -198,6 +199,19 @@ const SUPPLEMENTARY_SHEET = {
     ]
 } as const satisfies SealSchema;
 
+const compareMessageLists = (a: DerTLV[], b: DerTLV[]): boolean => {
+    if (a.length !== b.length) return false;
+
+    const map1 = new Map<number, Uint8Array>(a.map(i => [i.tag, i.value]));
+    const map2 = new Map<number, Uint8Array>(b.map(i => [i.tag, i.value]));
+    for (const [tag, value1] of map1) {
+        const value2 = map2.get(tag);
+        if (!value2 || !equalBytes(value1, value2)) return false;
+    }
+
+    return true;
+}
+
 describe("Feature", () => {
     test("#1 (ICAO_VISA)", () => {
         const seal = Buffer.from("dc03d9c5d9cac8a73a990f7134b834595d01022cdd52134a74da1347c6fed95cb89f9fce133c133c133c133c203833734aaf47f0c32f1a1e20eb2625393afe310403a00000050633be1fed20c603010c0601aa0701bbff400b276b4522526b723e2140f14bef1c25048cfed9223268c24337e7a6b5b9f02b1e15c86734ef7101d983869278ce1066694dd80e8b842b82b592db6fd56c10ae", "hex");
@@ -210,6 +224,7 @@ describe("Feature", () => {
         expect(mapped.PASSPORT_NUMBER).toBe("47110815P");
         expect(mapped.VISA_TYPE).toStrictEqual(new Uint8Array([0xAA]));
         expect(mapped.ADDITIONAL_FEATURES).toStrictEqual(new Uint8Array([0xBB]));
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, ICAO_VISA), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#2 (ARRIVAL_ATTESTATION)", () => {
@@ -219,6 +234,7 @@ describe("Feature", () => {
 
         expect(mapped.MRZ).toBe("MED<<MANNSENS<<MANNY<<<<<<<<<<<<<<<<6525845096USA7008038M2201018<<<<<<06");
         expect(mapped.AZR).toBe("ABC123456DEF");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, ARRIVAL_ATTESTATION), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#3 (ADDRESS_STICKER_ID)", () => {
@@ -229,6 +245,7 @@ describe("Feature", () => {
         expect(mapped.DOCUMENT_NUMBER).toBe("T2000AK47");
         expect(mapped.AGS).toBe("05314000");
         expect(mapped.ADDRESS).toBe("53175HEINEMANNSTR11");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, ADDRESS_STICKER_ID), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#4 (ADDRESS_STICKER_PASSPORT)", () => {
@@ -239,6 +256,7 @@ describe("Feature", () => {
         expect(mapped.DOCUMENT_NUMBER).toBe("PA5500K11");
         expect(mapped.AGS).toBe("03359010");
         expect(mapped.POSTAL_CODE).toBe("21614");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, ADDRESS_STICKER_PASSPORT), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#5 (RESIDENCE_PERMIT)", () => {
@@ -248,6 +266,7 @@ describe("Feature", () => {
 
         expect(mapped.MRZ).toBe("ATD<<RESIDORCE<<ROLAND<<<<<<<<<<<<<<6525845096USA7008038M2201018<<<<<<06");
         expect(mapped.PASSPORT_NUMBER).toBe("UFO001979");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, RESIDENCE_PERMIT), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#6 (SOCIAL_INSURANCE_CARD)", () => {
@@ -259,6 +278,7 @@ describe("Feature", () => {
         expect(mapped.SURNAME).toBe("Perschweiß");
         expect(mapped.FIRST_NAME).toBe("Oscar");
         expect(mapped.BIRTH_NAME).toBe("Jâcobénidicturius");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, SOCIAL_INSURANCE_CARD), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#7 (ICAO_EMERGENCY_TRAVEL_DOCUMENT)", () => {
@@ -267,6 +287,7 @@ describe("Feature", () => {
         const mapped = mapSealToFeatures(decodedSeal, ICAO_EMERGENCY_TRAVEL_DOCUMENT);
 
         expect(mapped.MRZ).toBe("I<GBRSUPAMANN<<MARY<<<<<<<<<<<<<<<<<6525845096USA7008038M2201018<<<<<<06");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, ICAO_EMERGENCY_TRAVEL_DOCUMENT), decodedSeal.messageList)).toBeTrue();
     });
 
     test("#8 (SUPPLEMENTARY_SHEET)", () => {
@@ -276,5 +297,6 @@ describe("Feature", () => {
 
         expect(mapped.MRZ).toBe("ATD<<RESIDORCE<<ROLAND<<<<<<<<<<<<<<6525845096USA7008038M2201018<<<<<<06");
         expect(mapped.SHEET_NUMBER).toBe("PA0000005");
+        expect(compareMessageLists(mapFeaturesToSeal(mapped, SUPPLEMENTARY_SHEET), decodedSeal.messageList)).toBeTrue();
     });
 });
