@@ -100,30 +100,30 @@ export class VDSHeader {
         offset += 1;
         if(!(rawVersion == 2 || rawVersion == 3)) throw new Error("Unsupported raw version");
 
-        const issuingCountry = C40Encoder.decode(data.slice(offset, offset + 2));
+        const issuingCountry = C40Encoder.decode(data.subarray(offset, offset + 2));
         offset += 2;
 
         let signerIdentifier: string, certificateReference: string;
         if(rawVersion == 3) { // ICAO version 4
-            const signerIdentifierAndCertRefLength = C40Encoder.decode(data.slice(offset, offset + 4));
+            const signerIdentifierAndCertRefLength = C40Encoder.decode(data.subarray(offset, offset + 4));
             offset += 4;
             signerIdentifier = signerIdentifierAndCertRefLength.substring(0, 4);
             
             const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
             const bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
             
-            certificateReference = C40Encoder.decode(data.slice(offset, offset + bytesToDecode));
+            certificateReference = C40Encoder.decode(data.subarray(offset, offset + bytesToDecode));
             offset += bytesToDecode;
         } else { // ICAO version 3
-            const signerCertRef = C40Encoder.decode(data.slice(offset, offset + 6));
+            const signerCertRef = C40Encoder.decode(data.subarray(offset, offset + 6));
             offset += 6;
             signerIdentifier = signerCertRef.substring(0, 4);
             certificateReference = signerCertRef.substring(4);
         }
         
-        const issuingDate = DateEncoder.decode(data.slice(offset, offset + 3));
+        const issuingDate = DateEncoder.decode(data.subarray(offset, offset + 3));
         offset += 3;
-        const sigDate = DateEncoder.decode(data.slice(offset, offset + 3));
+        const sigDate = DateEncoder.decode(data.subarray(offset, offset + 3));
         offset += 3;
 
         const docFeatureRef = data[offset];
@@ -185,11 +185,10 @@ export class Seal {
     /** Decode visible digital seal from bytes */
     static decode(data: Uint8Array): Seal {
         const header = VDSHeader.decode(data);
-        let offset = header._offset;
         const messageList: DerTLV[] = [];
         let signature = null;
 
-        for(const i of parseTLVs(data.subarray(offset))) {
+        for(const i of parseTLVs(data.subarray(header._offset))) {
             if(i.tag === 0xff) signature = VDSSignature.decode(i.encoded);
             else messageList.push(i);
         }

@@ -62,24 +62,21 @@ console.log(verifier.verifySeal(decodedSeal));
 
 ### Map VDS with schema
 ```ts
-import { Seal, mapSealToFeatures, type SealSchema } from "@li0ard/vds";
+import { Seal, VDSDocument, VDSProp, decodeSeal, FeatureCoding, encodeSeal } from "@li0ard/vds";
 
-const ICAO_EMERGENCY_TRAVEL_DOCUMENT = {
-    documentRef: 0x5e03,
-    version: 4,
-    features: [
-        {
-            name: "MRZ",
-            coding: FeatureCoding.MRZ,
-            tag: 2,
-            required: true
-        }
-    ]
-} as const satisfies SealSchema;
+@VDSDocument({ documentRef: 0x5e03, version: 4 })
+class ICAOEmergencyTravelDocument {
+    @VDSProp({ tag: 2, coding: FeatureCoding.MRZ })
+    mrz!: string;
+}
 
 const seal = Buffer.from("DC03....", "hex");
 const decodedSeal = Seal.decode(seal);
-console.log(mapSealToFeatures(decodedSeal, schema)); // - { "MRZ": "..." }
+const mapped = decodeSeal(decodedSeal, ICAOEmergencyTravelDocument);
+console.log(mapped);
+
+// Also serialize back
+console.log(encodeSeal(mapped));
 ```
 
 ### Parse ICAO barcode (IDB)

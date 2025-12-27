@@ -60,7 +60,7 @@ export class IDBHeader {
         const signatureAlgorithm = data[offset];
         offset += 1;
 
-        const certificateReference = data.slice(offset, offset + 5);
+        const certificateReference = data.subarray(offset, offset + 5);
         offset += 5;
 
         const signatureCreationDate = DateEncoder.decodeMaskedDate(data.subarray(offset, offset + 4));
@@ -133,7 +133,7 @@ export class IDBPayload {
         let signature: IDBSignature | null = null;
 
         const headerSize = isSigned ? 12 : 2;
-        const header = IDBHeader.decode(data.slice(0, headerSize));
+        const header = IDBHeader.decode(data.subarray(0, headerSize));
         
         for(const i of parseTLVs(data.subarray(headerSize))) {
             switch(i.tag) {

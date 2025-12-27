@@ -109,7 +109,7 @@ export class Signer {
 
         const signature = this.curve.sign(dataToSign, this.privateKey, { prehash: prehash });
 
-        return new VDSSignature(signature.slice(0, signature.length / 2), signature.slice(signature.length / 2));
+        return new VDSSignature(signature.subarray(0, signature.length / 2), signature.subarray(signature.length / 2));
     }
 
     /**
@@ -136,6 +136,6 @@ export class Signer {
 
         const signature = this.curve.sign(digest(barcode.signedBytes), this.privateKey, { prehash: false });
 
-        return new IDBSignature(signature.slice(0, signature.length / 2), signature.slice(signature.length / 2));
+        return new IDBSignature(signature.subarray(0, signature.length / 2), signature.subarray(signature.length / 2));
     }
 }

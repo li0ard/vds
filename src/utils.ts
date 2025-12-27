@@ -201,7 +201,7 @@ export class DerTLV {
             const lengthBytes = numberToBytesBE(length, 4);
             let byteCount = 1;
             while (byteCount < 4 && lengthBytes[byteCount] === 0) byteCount++;
-            const actualLengthBytes = lengthBytes.slice(4 - byteCount);
+            const actualLengthBytes = lengthBytes.subarray(4 - byteCount);
             const firstByte = (0x80 | actualLengthBytes.length) & 0xFF;
             
             return concatBytes(new Uint8Array([firstByte]), actualLengthBytes);
@@ -219,7 +219,7 @@ export class DerTLV {
         } else {
             let startIndex = 0;
             while (startIndex < value.length - 1 && value[startIndex] === 0) startIndex++;
-            positiveValue = value.slice(startIndex);
+            positiveValue = value.subarray(startIndex);
         }
 
         return new DerTLV(2, positiveValue).encoded;
@@ -247,7 +247,7 @@ export class DerTLV {
             for (let i = 2; i < 2 + lengthOfLength; i++) length = (length << 8) | (derBytes[i] & 0xFF);
         }
 
-        return new DerTLV(tag, derBytes.slice(1 + lengthByteCount, 1 + lengthByteCount + length))
+        return new DerTLV(tag, derBytes.subarray(1 + lengthByteCount, 1 + lengthByteCount + length))
     }
 }
 
@@ -273,7 +273,7 @@ export const parseTLVs = (rawBytes: Uint8Array): DerTLV[] => {
             throw new Error(`Can't decode length: ${hexValue}`);
         }
 
-        const value = rawBytes.slice(position, position + le);
+        const value = rawBytes.subarray(position, position + le);
         position += le;
             
         derTlvList.push(new DerTLV(tag, value));
@@ -343,8 +343,8 @@ export abstract class AbstractECDSARawSignature {
         const parsed = DerTLV.decode(data);
         if(parsed == null) throw new Error("Invalid signature");
         return new this(
-            parsed.value.slice(0, parsed.value.length / 2),
-            parsed.value.slice(parsed.value.length / 2, parsed.value.length)
+            parsed.value.subarray(0, parsed.value.length / 2),
+            parsed.value.subarray(parsed.value.length / 2, parsed.value.length)
         );
     }
 }
