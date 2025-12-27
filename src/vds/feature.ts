@@ -1,6 +1,6 @@
 import { bytesToNumberBE } from "@noble/curves/utils.js";
 import { C40Encoder, DateEncoder, DerTLV, intToBytesBE } from "../utils.js";
-import { Seal } from "./vds.js";
+import { type Seal } from "./vds.js";
 
 /** Feature encoding */
 export enum FeatureCoding {
