@@ -98,8 +98,8 @@ class SocialInsuranceCard {
     @VDSProp({ tag: 3, coding: FeatureCoding.UTF8_STRING })
     firstName!: string;
 
-    @VDSProp({ tag: 4, coding: FeatureCoding.UTF8_STRING })
-    birthName!: string;
+    @VDSProp({ tag: 4, coding: FeatureCoding.UTF8_STRING, optional: true })
+    birthName?: string;
 }
 
 @VDSDocument({ documentRef: 0xfa06, version: 4 })

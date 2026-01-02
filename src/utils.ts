@@ -126,8 +126,7 @@ export class C40Encoder {
             .replaceAll("\r", "")
             .replaceAll("\n", "");
         
-        let len = dataString.length;
-
+        const len = dataString.length;
         for(let i = 0; i < len; i++) {
             if (i % 3 == 0) {
                 if (i + 2 < len) {
@@ -296,55 +295,4 @@ export const intToBytesBE = (value: bigint | number): Uint8Array => {
     }
 
     return new Uint8Array(bytes);
-}
-
-/** Abstract ECDSA signature (Raw format) */
-export abstract class AbstractECDSARawSignature {
-    static readonly TAG: number;
-    abstract readonly TAG: number;
-    private _r: Uint8Array;
-    private _s: Uint8Array;
-
-    constructor(r: Uint8Array, s: Uint8Array) {
-        this._r = r;
-        this._s = s;
-    }
-
-    /** `r` as bigint */
-    get r(): bigint { return bytesToNumberBE(this._r); }
-    /** `r` as bytes */
-    get rBytes(): Uint8Array { return this._r; }
-    /** `s` as bigint */
-    get s(): bigint { return bytesToNumberBE(this._s); }
-    /** `s` as bytes */
-    get sBytes(): Uint8Array { return this._s; }
-
-    /** Encoded IDB signature */
-    get encoded(): Uint8Array {
-        return new DerTLV(this.TAG, concatBytes(this.rBytes, this.sBytes)).encoded;
-    }
-
-    /** Encoded IDB signature (as ASN.1) */
-    toDER(): Uint8Array {
-        return new DerTLV(0x30, concatBytes(
-            DerTLV.getDerInteger(this.rBytes),
-            DerTLV.getDerInteger(this.sBytes),
-        )).encoded;
-    }
-
-    static decode<T extends AbstractECDSARawSignature>(
-        this: {
-            new (r: Uint8Array, s: Uint8Array): T;
-            readonly TAG: number;
-        },
-        data: Uint8Array
-    ): T {
-        if(data[0] != this.TAG) throw new Error("Signature tag mismatch");
-        const parsed = DerTLV.decode(data);
-        if(parsed == null) throw new Error("Invalid signature");
-        return new this(
-            parsed.value.subarray(0, parsed.value.length / 2),
-            parsed.value.subarray(parsed.value.length / 2, parsed.value.length)
-        );
-    }
 }

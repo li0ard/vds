@@ -1,5 +1,6 @@
 import { concatBytes } from "@noble/curves/utils.js";
-import { AbstractECDSARawSignature, C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
+import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
+import { AbstractECDSARawSignature, AbstractSeal } from "../generic.js"
 
 /**
  * Seal header
@@ -94,11 +95,11 @@ export class VDSHeader {
 
         const magicByte = data[offset];
         offset += 1;
-        if(magicByte != VDSHeader.TAG) throw new Error("Magic Constant mismatch");
+        if(magicByte != VDSHeader.TAG) throw new Error("Magic constant mismatch");
 
         const rawVersion = data[offset];
         offset += 1;
-        if(!(rawVersion == 2 || rawVersion == 3)) throw new Error("Unsupported raw version");
+        if(!(rawVersion == 2 || rawVersion == 3)) throw new Error("Unsupported VDS version");
 
         const issuingCountry = C40Encoder.decode(data.subarray(offset, offset + 2));
         offset += 2;
@@ -109,8 +110,16 @@ export class VDSHeader {
             offset += 4;
             signerIdentifier = signerIdentifierAndCertRefLength.substring(0, 4);
             
-            const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
-            const bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
+            //const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
+            //const bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
+            let bytesToDecode;
+            if(signerIdentifier == "DEZV") {
+                const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4));
+                bytesToDecode = Math.floor((2 * certRefLength + 2) / 3);
+            } else {
+                const certRefLength = parseInt(signerIdentifierAndCertRefLength.substring(4), 16);
+                bytesToDecode = (Math.floor((certRefLength - 1) / 3) * 2) + 2;
+            }
             
             certificateReference = C40Encoder.decode(data.subarray(offset, offset + bytesToDecode));
             offset += bytesToDecode;
@@ -152,7 +161,7 @@ export class VDSSignature extends AbstractECDSARawSignature {
  * 
  * Described by ICAO p.13 section 2
  */
-export class Seal {
+export class Seal implements AbstractSeal {
     /**
      * Visible digital seal (VDS)
      * @param header VDS header
@@ -165,16 +174,14 @@ export class Seal {
         public signature: VDSSignature | null = null
     ) {}
 
-    /** Signed bytes */
     get signedBytes(): Uint8Array {
         return concatBytes(this.header.encoded, ...this.messageList.map(i => i.encoded));
     }
-    /** Signature bytes */
     get signatureBytes(): Uint8Array | null {
         return this.signature ? this.signature.toDER() : null;
     }
 
-    /** Encoded visible digital seal */
+    /** Encoded VDS */
     get encoded(): Uint8Array {
         let encoded = this.signedBytes;
         if(this.signature) encoded = concatBytes(encoded, this.signature.encoded);
@@ -182,7 +189,7 @@ export class Seal {
         return encoded;
     }
 
-    /** Decode visible digital seal from bytes */
+    /** Decode VDS from bytes */
     static decode(data: Uint8Array): Seal {
         const header = VDSHeader.decode(data);
         const messageList: DerTLV[] = [];

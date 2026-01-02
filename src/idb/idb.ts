@@ -1,7 +1,8 @@
 import { concatBytes } from "@noble/curves/utils.js";
-import { AbstractECDSARawSignature, C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
+import { C40Encoder, DateEncoder, DerTLV, parseTLVs } from "../utils.js";
 import { deflate, inflate } from "pako";
 import { base32nopad } from "@scure/base";
+import { AbstractECDSARawSignature, AbstractSeal } from "../generic.js"
 
 /** IDB signature algorithm */
 export enum IDBSignatureAlgorithm {
@@ -19,9 +20,6 @@ export enum IDBSignatureAlgorithm {
  * Described by ICAO Datastructure for Barcode section 3.2
  */
 export class IDBHeader {
-    /** Offset for decoding */
-    public _offset = 0;
-
     /**
      * Barcode header
      * @param countryIdentifier Issuing country code
@@ -66,9 +64,7 @@ export class IDBHeader {
         const signatureCreationDate = DateEncoder.decodeMaskedDate(data.subarray(offset, offset + 4));
         offset += 4;
 
-        const decoded = new IDBHeader(countryIdentifier, signatureAlgorithm, certificateReference, signatureCreationDate);
-        decoded._offset = offset;
-        return decoded;
+        return new IDBHeader(countryIdentifier, signatureAlgorithm, certificateReference, signatureCreationDate);
     }
 }
 
@@ -162,7 +158,7 @@ export class IDBPayload {
  * 
  * Described by ICAO Datastructure for Barcode section 2
  */
-export class ICAOBarcode {
+export class ICAOBarcode implements AbstractSeal {
     /** Barcode identifier (Old) */
     static readonly BARCODE_IDENTIFIER_OLD = "NDB1";
     /** Barcode identifier */
@@ -187,11 +183,9 @@ export class ICAOBarcode {
     /** Is barcode compressed? */
     get isZipped(): boolean { return ((this._flag - 0x41) & 2) == 2; }
 
-    /** Signed bytes */
     get signedBytes(): Uint8Array {
         return concatBytes(this.header.encoded, this.payload.messageListEncoded);
     }
-    /** Signature bytes */
     get signatureBytes(): Uint8Array | null {
         return this.payload.signature ? this.payload.signature.toDER() : null;
     }
